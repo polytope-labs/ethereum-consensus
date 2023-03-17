@@ -56,7 +56,7 @@ pub fn process_slashings<
             let penalty_numerator =
                 validator.effective_balance / increment * adjusted_total_slashing_balance;
             let penalty = penalty_numerator / total_balance * increment;
-            decrease_balance(state, i, penalty);
+            decrease_balance(state, i as u64, penalty);
         }
     }
     Ok(())

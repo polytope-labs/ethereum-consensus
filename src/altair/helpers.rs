@@ -74,7 +74,7 @@ pub fn get_next_sync_committee_indices<
         let i_bytes: [u8; 8] = ((i / 32) as u64).to_le_bytes();
         hash_input[32..].copy_from_slice(&i_bytes);
         let random_byte = hash(hash_input).as_ref()[i % 32] as u64;
-        let effective_balance = state.validators[candidate_index].effective_balance;
+        let effective_balance = state.validators[candidate_index as usize].effective_balance;
 
         if effective_balance * max_random_byte >= context.max_effective_balance * random_byte {
             sync_committee_indices.push(candidate_index);
@@ -110,7 +110,7 @@ pub fn get_next_sync_committee<
     let indices = get_next_sync_committee_indices(state, context)?;
     let public_keys = indices
         .into_iter()
-        .map(|i| state.validators[i].public_key.clone())
+        .map(|i| state.validators[i as usize].public_key.clone())
         .collect::<Vec<_>>();
     let public_keys = Vector::<BlsPublicKey, SYNC_COMMITTEE_SIZE>::try_from(public_keys)
         .map_err(|(_, err)| err)?;
@@ -195,6 +195,7 @@ pub fn get_unslashed_participating_indices<
     Ok(get_active_validator_indices(state, epoch)
         .into_iter()
         .filter(|&i| {
+            let i = i as usize;
             let did_participate = has_flag(epoch_participation[i], flag_index);
             let not_slashed = !state.validators[i].slashed;
             did_participate && not_slashed
@@ -305,10 +306,11 @@ pub fn get_flag_index_deltas<
         if unslashed_participating_indices.contains(&index) {
             if not_leaking {
                 let reward_numerator = base_reward * weight * unslashed_participating_increments;
-                rewards[index] += reward_numerator / (active_increments * WEIGHT_DENOMINATOR);
+                rewards[index as usize] +=
+                    reward_numerator / (active_increments * WEIGHT_DENOMINATOR);
             }
         } else if flag_index != TIMELY_HEAD_FLAG_INDEX {
-            penalties[index] += base_reward * weight / WEIGHT_DENOMINATOR;
+            penalties[index as usize] += base_reward * weight / WEIGHT_DENOMINATOR;
         }
     }
     Ok((rewards, penalties))
@@ -348,6 +350,7 @@ pub fn get_inactivity_penalty_deltas<
     )?;
     for i in get_eligible_validator_indices(state, context) {
         if !matching_target_indices.contains(&i) {
+            let i = i as usize;
             let penalty_numerator =
                 state.validators[i].effective_balance * state.inactivity_scores[i];
             let penalty_denominator =
@@ -384,6 +387,7 @@ pub fn slash_validator<
 ) -> Result<()> {
     let epoch = get_current_epoch(state, context);
     initiate_validator_exit(state, slashed_index, context);
+    let slashed_index = slashed_index as usize;
     state.validators[slashed_index].slashed = true;
     state.validators[slashed_index].withdrawable_epoch = u64::max(
         state.validators[slashed_index].withdrawable_epoch,
@@ -393,7 +397,7 @@ pub fn slash_validator<
     state.slashings[slashings_index] += state.validators[slashed_index].effective_balance;
     decrease_balance(
         state,
-        slashed_index,
+        slashed_index as u64,
         state.validators[slashed_index].effective_balance
             / context.min_slashing_penalty_quotient_altair,
     );

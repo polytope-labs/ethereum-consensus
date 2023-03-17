@@ -38,6 +38,7 @@ fn translate_participation<
             get_attestation_participation_flag_indices(state, data, inclusion_delay, context)?;
 
         for index in get_attesting_indices(state, data, &attestation.aggregation_bits, context)? {
+            let index = index as usize;
             for flag_index in &participation_flag_indices {
                 let flags = state.previous_epoch_participation[index];
                 state.previous_epoch_participation[index] = add_flag(flags, *flag_index);

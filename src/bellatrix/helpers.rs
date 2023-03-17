@@ -52,11 +52,11 @@ pub fn get_inactivity_penalty_deltas<
     )?;
     for i in get_eligible_validator_indices(state, context) {
         if !matching_target_indices.contains(&i) {
-            let penalty_numerator =
-                state.validators[i].effective_balance * state.inactivity_scores[i];
+            let penalty_numerator = state.validators[i as usize].effective_balance
+                * state.inactivity_scores[i as usize];
             let penalty_denominator =
                 context.inactivity_score_bias * context.inactivity_penalty_quotient_bellatrix;
-            penalties[i] += penalty_numerator / penalty_denominator;
+            penalties[i as usize] += penalty_numerator / penalty_denominator;
         }
     }
     Ok((rewards, penalties))
@@ -96,6 +96,7 @@ pub fn slash_validator<
 ) -> Result<()> {
     let epoch = get_current_epoch(state, context);
     initiate_validator_exit(state, slashed_index, context);
+    let slashed_index = slashed_index as usize;
     state.validators[slashed_index].slashed = true;
     state.validators[slashed_index].withdrawable_epoch = u64::max(
         state.validators[slashed_index].withdrawable_epoch,
@@ -105,7 +106,7 @@ pub fn slash_validator<
     state.slashings[slashings_index] += state.validators[slashed_index].effective_balance;
     decrease_balance(
         state,
-        slashed_index,
+        slashed_index as u64,
         state.validators[slashed_index].effective_balance
             / context.min_slashing_penalty_quotient_bellatrix,
     );

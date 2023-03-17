@@ -142,6 +142,7 @@ pub fn process_attestation<
         get_attesting_indices(state, data, &attestation.aggregation_bits, context)?;
     let mut proposer_reward_numerator = 0;
     for index in attesting_indices {
+        let index = index as usize;
         for (flag_index, weight) in PARTICIPATION_FLAG_WEIGHTS.iter().enumerate() {
             if is_current {
                 if participation_flag_indices.contains(&flag_index)
@@ -149,14 +150,16 @@ pub fn process_attestation<
                 {
                     state.current_epoch_participation[index] =
                         add_flag(state.current_epoch_participation[index], flag_index);
-                    proposer_reward_numerator += get_base_reward(state, index, context)? * weight;
+                    proposer_reward_numerator +=
+                        get_base_reward(state, index as u64, context)? * weight;
                 }
             } else if participation_flag_indices.contains(&flag_index)
                 && !has_flag(state.previous_epoch_participation[index], flag_index)
             {
                 state.previous_epoch_participation[index] =
                     add_flag(state.previous_epoch_participation[index], flag_index);
-                proposer_reward_numerator += get_base_reward(state, index, context)? * weight;
+                proposer_reward_numerator +=
+                    get_base_reward(state, index as u64, context)? * weight;
             }
         }
     }
@@ -224,7 +227,7 @@ pub fn process_attester_slashing<
     let mut slashed_any = false;
     let current_epoch = get_current_epoch(state, context);
     for &index in &indices {
-        if is_slashable_validator(&state.validators[index], current_epoch) {
+        if is_slashable_validator(&state.validators[index as usize], current_epoch) {
             slash_validator(state, index, None, context)?;
             slashed_any = true;
         }
@@ -326,7 +329,7 @@ pub fn process_block_header<
         body_root: block.body.hash_tree_root()?,
         ..Default::default()
     };
-    let proposer = &state.validators[block.proposer_index];
+    let proposer = &state.validators[block.proposer_index as usize];
     if proposer.slashed {
         return Err(invalid_header_error(
             InvalidBeaconBlockHeader::ProposerSlashed(proposer_index),
@@ -421,7 +424,7 @@ pub fn process_deposit<
             .iter()
             .position(|v| &v.public_key == public_key)
             .unwrap();
-        increase_balance(state, index, amount);
+        increase_balance(state, index as u64, amount);
     }
     Ok(())
 }
@@ -612,11 +615,14 @@ pub fn process_proposer_slashing<
         )));
     }
     let proposer_index = header_1.proposer_index;
-    let proposer = state.validators.get(proposer_index).ok_or_else(|| {
-        invalid_operation_error(InvalidOperation::ProposerSlashing(
-            InvalidProposerSlashing::InvalidIndex(proposer_index),
-        ))
-    })?;
+    let proposer = state
+        .validators
+        .get(proposer_index as usize)
+        .ok_or_else(|| {
+            invalid_operation_error(InvalidOperation::ProposerSlashing(
+                InvalidProposerSlashing::InvalidIndex(proposer_index),
+            ))
+        })?;
     if !is_slashable_validator(proposer, get_current_epoch(state, context)) {
         return Err(invalid_operation_error(InvalidOperation::ProposerSlashing(
             InvalidProposerSlashing::ProposerIsNotSlashable(header_1.proposer_index),
@@ -688,7 +694,7 @@ pub fn process_randao<
 ) -> Result<()> {
     let mut epoch = get_current_epoch(state, context);
     let proposer_index = get_beacon_proposer_index(state, context)?;
-    let proposer = &state.validators[proposer_index];
+    let proposer = &state.validators[proposer_index as usize];
     let domain = get_domain(state, DomainType::Randao, Some(epoch), context)?;
     let signing_root = compute_signing_root(&mut epoch, domain)?;
     if verify_signature(
@@ -800,7 +806,7 @@ pub fn process_sync_aggregate<
             committee_indices.push(
                 *all_public_keys
                     .get(public_key)
-                    .expect("validator public_key should exist"),
+                    .expect("validator public_key should exist") as u64,
             );
         }
         committee_indices
@@ -856,7 +862,7 @@ pub fn process_voluntary_exit<
     let voluntary_exit = &mut signed_voluntary_exit.message;
     let validator = state
         .validators
-        .get(voluntary_exit.validator_index)
+        .get(voluntary_exit.validator_index as usize)
         .ok_or_else(|| {
             invalid_operation_error(InvalidOperation::VoluntaryExit(
                 InvalidVoluntaryExit::InvalidIndex(voluntary_exit.validator_index),

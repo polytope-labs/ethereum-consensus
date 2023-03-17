@@ -1,6 +1,7 @@
 pub use crate::crypto::{PublicKey as BlsPublicKey, Signature as BlsSignature};
 pub use crate::domains::DomainType;
 use crate::ssz::ByteVector;
+use codec::WrapperTypeDecode;
 use ssz_rs::prelude::*;
 
 pub use ssz_rs::prelude::U256;
@@ -10,7 +11,8 @@ pub type Slot = u64;
 pub type Epoch = u64;
 
 pub type CommitteeIndex = usize;
-pub type ValidatorIndex = usize;
+pub type ValidatorIndex = u64;
+
 pub type WithdrawalIndex = usize;
 pub type Gwei = u64;
 pub type Hash32 = Bytes32;

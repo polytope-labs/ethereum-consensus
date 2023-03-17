@@ -39,10 +39,10 @@ pub fn compute_committee(
 ) -> Result<Vec<ValidatorIndex>> {
     let start = (indices.len() * index) / count;
     let end = (indices.len()) * (index + 1) / count;
-    let mut committee = vec![0usize; end - start];
+    let mut committee = vec![0u64; end - start];
     for i in start..end {
         let index = compute_shuffled_index(i, indices.len(), seed, context)?;
-        committee[i - start] = indices[index];
+        committee[i - start] = indices[index as usize];
     }
     Ok(committee)
 }
@@ -120,7 +120,7 @@ pub fn compute_proposer_index<
         let i_bytes: [u8; 8] = ((i / 32) as u64).to_le_bytes();
         hash_input[32..].copy_from_slice(&i_bytes);
         let random_byte = hash(hash_input).as_ref()[i % 32] as u64;
-        let effective_balance = state.validators[candidate_index].effective_balance;
+        let effective_balance = state.validators[candidate_index as usize].effective_balance;
         if effective_balance * max_byte >= context.max_effective_balance * random_byte {
             return Ok(candidate_index);
         }
@@ -185,6 +185,7 @@ pub fn decrease_balance<
     index: ValidatorIndex,
     delta: Gwei,
 ) {
+    let index = index as usize;
     if delta > state.balances[index] {
         state.balances[index] = 0
     } else {
@@ -216,7 +217,7 @@ pub fn get_active_validator_indices<
     let mut active = Vec::with_capacity(state.validators.len());
     for (i, v) in state.validators.iter().enumerate() {
         if is_active_validator(v, epoch) {
-            active.push(i)
+            active.push(i as u64)
         }
     }
     active
@@ -508,7 +509,7 @@ pub fn get_eligible_validator_indices<
             if is_active_validator(validator, previous_epoch)
                 || (validator.slashed && previous_epoch + 1 < validator.withdrawable_epoch)
             {
-                Some(i)
+                Some(i as u64)
             } else {
                 None
             }
@@ -686,7 +687,7 @@ pub fn get_total_balance<
     let total_balance = indices
         .iter()
         .try_fold(Gwei::default(), |acc, i| {
-            acc.checked_add(state.validators[*i].effective_balance)
+            acc.checked_add(state.validators[*i as usize].effective_balance)
         })
         .ok_or(Error::Overflow)?;
     Ok(u64::max(total_balance, context.effective_balance_increment))
@@ -743,7 +744,7 @@ pub fn increase_balance<
     index: ValidatorIndex,
     delta: Gwei,
 ) {
-    state.balances[index] += delta;
+    state.balances[index as usize] += delta;
 }
 pub fn initiate_validator_exit<
     const SLOTS_PER_HISTORICAL_ROOT: usize,
@@ -768,7 +769,7 @@ pub fn initiate_validator_exit<
     index: ValidatorIndex,
     context: &Context,
 ) {
-    if state.validators[index].exit_epoch != FAR_FUTURE_EPOCH {
+    if state.validators[index as usize].exit_epoch != FAR_FUTURE_EPOCH {
         return;
     }
     let mut exit_epochs: Vec<Epoch> = state
@@ -790,9 +791,9 @@ pub fn initiate_validator_exit<
     if exit_queue_churn >= get_validator_churn_limit(state, context) {
         exit_queue_epoch += 1;
     }
-    state.validators[index].exit_epoch = exit_queue_epoch;
-    state.validators[index].withdrawable_epoch =
-        state.validators[index].exit_epoch + context.min_validator_withdrawability_delay;
+    state.validators[index as usize].exit_epoch = exit_queue_epoch;
+    state.validators[index as usize].withdrawable_epoch =
+        state.validators[index as usize].exit_epoch + context.min_validator_withdrawability_delay;
 }
 pub fn is_active_validator(validator: &Validator, epoch: Epoch) -> bool {
     validator.activation_epoch <= epoch && epoch < validator.exit_epoch
@@ -881,7 +882,7 @@ pub fn is_valid_indexed_attestation<
             ),
         ));
     }
-    let indices: HashSet<usize> = HashSet::from_iter(attesting_indices.iter().cloned());
+    let indices: HashSet<u64> = HashSet::from_iter(attesting_indices.iter().cloned());
     if indices.len() != indexed_attestation.attesting_indices.len() {
         let mut seen = HashSet::new();
         let mut duplicates = vec![];
@@ -902,11 +903,11 @@ pub fn is_valid_indexed_attestation<
     for index in indices {
         let public_key = state
             .validators
-            .get(index)
+            .get(index as usize)
             .map(|v| &v.public_key)
             .ok_or_else(|| {
                 invalid_operation_error(InvalidOperation::IndexedAttestation(
-                    InvalidIndexedAttestation::InvalidIndex(index),
+                    InvalidIndexedAttestation::InvalidIndex(index as u64),
                 ))
             })?;
         public_keys.push(public_key);
@@ -961,7 +962,7 @@ pub fn verify_block_signature<
     >,
     context: &Context,
 ) -> Result<()> {
-    let proposer_index = signed_block.message.proposer_index;
+    let proposer_index = signed_block.message.proposer_index as usize;
     let proposer = state
         .validators
         .get(proposer_index)

@@ -252,7 +252,7 @@ pub fn process_registry_updates<
         if is_active_validator(validator, current_epoch)
             && validator.effective_balance <= context.ejection_balance
         {
-            initiate_validator_exit(state, i, context);
+            initiate_validator_exit(state, i.try_into().expect("Cannot convert to u64"), context);
         }
     }
     let mut activation_queue = state
@@ -261,13 +261,15 @@ pub fn process_registry_updates<
         .enumerate()
         .filter_map(|(index, validator)| {
             if is_eligible_for_activation(state, validator) {
-                Some(index)
+                Some(index as u64)
             } else {
                 None
             }
         })
         .collect::<Vec<ValidatorIndex>>();
     activation_queue.sort_by(|&i, &j| {
+        let i = i as usize;
+        let j = j as usize;
         let a = &state.validators[i];
         let b = &state.validators[j];
         (a.activation_eligibility_epoch, i).cmp(&(b.activation_eligibility_epoch, j))
@@ -277,7 +279,7 @@ pub fn process_registry_updates<
         .into_iter()
         .take(get_validator_churn_limit(state, context))
     {
-        let validator = &mut state.validators[i];
+        let validator = &mut state.validators[i as usize];
         validator.activation_epoch = activation_exit_epoch;
     }
 }

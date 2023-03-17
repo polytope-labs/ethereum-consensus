@@ -49,7 +49,7 @@ pub fn get_base_reward<
     context: &Context,
 ) -> Result<Gwei> {
     let increments =
-        state.validators[index].effective_balance / context.effective_balance_increment;
+        state.validators[index as usize].effective_balance / context.effective_balance_increment;
     Ok(increments * get_base_reward_per_increment(state, context)?)
 }
 pub fn get_finality_delay<
@@ -317,7 +317,9 @@ pub fn process_inactivity_updates<
     )?;
     let not_is_leaking = !is_in_inactivity_leak(state, context);
     for index in eligible_validator_indices {
-        if unslashed_participating_indices.contains(&index) {
+        let index_u64 = index;
+        let index = index as usize;
+        if unslashed_participating_indices.contains(&index_u64) {
             state.inactivity_scores[index] -= u64::min(1, state.inactivity_scores[index]);
         } else {
             state.inactivity_scores[index] += context.inactivity_score_bias;
@@ -499,7 +501,7 @@ pub fn process_registry_updates<
         if is_active_validator(validator, current_epoch)
             && validator.effective_balance <= context.ejection_balance
         {
-            initiate_validator_exit(state, i, context);
+            initiate_validator_exit(state, i as u64, context);
         }
     }
     let mut activation_queue = state
@@ -508,13 +510,15 @@ pub fn process_registry_updates<
         .enumerate()
         .filter_map(|(index, validator)| {
             if is_eligible_for_activation(state, validator) {
-                Some(index)
+                Some(index as u64)
             } else {
                 None
             }
         })
         .collect::<Vec<ValidatorIndex>>();
     activation_queue.sort_by(|&i, &j| {
+        let i = i as usize;
+        let j = j as usize;
         let a = &state.validators[i];
         let b = &state.validators[j];
         (a.activation_eligibility_epoch, i).cmp(&(b.activation_eligibility_epoch, j))
@@ -524,7 +528,7 @@ pub fn process_registry_updates<
         .into_iter()
         .take(get_validator_churn_limit(state, context))
     {
-        let validator = &mut state.validators[i];
+        let validator = &mut state.validators[i as usize];
         validator.activation_epoch = activation_exit_epoch;
     }
 }
@@ -570,8 +574,9 @@ pub fn process_rewards_and_penalties<
     deltas.push(get_inactivity_penalty_deltas(state, context)?);
     for (rewards, penalties) in deltas {
         for index in 0..state.validators.len() {
-            increase_balance(state, index, rewards[index]);
-            decrease_balance(state, index, penalties[index]);
+            let index = index.try_into().expect("Error converting");
+            increase_balance(state, index, rewards[index as usize]);
+            decrease_balance(state, index, penalties[index as usize]);
         }
     }
     Ok(())

@@ -122,6 +122,7 @@ pub fn process_attestation<
         get_attesting_indices(state, data, &attestation.aggregation_bits, context)?;
     let mut proposer_reward_numerator = 0;
     for index in attesting_indices {
+        let index = index as usize;
         for (flag_index, weight) in PARTICIPATION_FLAG_WEIGHTS.iter().enumerate() {
             if is_current {
                 if participation_flag_indices.contains(&flag_index)
@@ -129,14 +130,16 @@ pub fn process_attestation<
                 {
                     state.current_epoch_participation[index] =
                         add_flag(state.current_epoch_participation[index], flag_index);
-                    proposer_reward_numerator += get_base_reward(state, index, context)? * weight;
+                    proposer_reward_numerator +=
+                        get_base_reward(state, index as u64, context)? * weight;
                 }
             } else if participation_flag_indices.contains(&flag_index)
                 && !has_flag(state.previous_epoch_participation[index], flag_index)
             {
                 state.previous_epoch_participation[index] =
                     add_flag(state.previous_epoch_participation[index], flag_index);
-                proposer_reward_numerator += get_base_reward(state, index, context)? * weight;
+                proposer_reward_numerator +=
+                    get_base_reward(state, index as u64, context)? * weight;
             }
         }
     }
@@ -235,7 +238,7 @@ pub fn process_deposit<
             .validators
             .iter()
             .position(|v| &v.public_key == public_key)
-            .unwrap();
+            .unwrap() as u64;
 
         increase_balance(state, index, amount);
     }
@@ -330,7 +333,7 @@ pub fn process_sync_aggregate<
             committee_indices.push(
                 *all_public_keys
                     .get(public_key)
-                    .expect("validator public_key should exist"),
+                    .expect("validator public_key should exist") as u64,
             );
         }
         committee_indices

@@ -3,6 +3,7 @@ use crate::phase0::{
     Attestation, AttesterSlashing, Deposit, Eth1Data, ProposerSlashing, SignedVoluntaryExit,
 };
 use crate::primitives::{BlsSignature, Bytes32, Root, Slot, ValidatorIndex};
+use codec::{Input, WrapperTypeDecode};
 use ssz_rs::prelude::*;
 
 #[derive(Default, Debug, SimpleSerialize, Clone, PartialEq, Eq)]
@@ -73,7 +74,7 @@ pub struct SignedBeaconBlock<
     pub signature: BlsSignature,
 }
 
-#[derive(Default, Debug, SimpleSerialize, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, codec::Encode, codec::Decode, SimpleSerialize, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BeaconBlockHeader {
     #[cfg_attr(feature = "serde", serde(with = "crate::serde::as_string"))]

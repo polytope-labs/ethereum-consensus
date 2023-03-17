@@ -157,7 +157,7 @@ pub fn get_unslashed_attesting_indices<
     let mut output = HashSet::new();
     for a in attestations {
         for index in get_attesting_indices(state, &a.data, &a.aggregation_bits, context)? {
-            if !state.validators[index].slashed {
+            if !state.validators[index as usize].slashed {
                 output.insert(index);
             }
         }
@@ -235,8 +235,9 @@ pub fn process_rewards_and_penalties<
     if current_epoch != GENESIS_EPOCH {
         let (rewards, penalties) = get_attestation_deltas(state, context)?;
         for i in 0..state.validators.len() {
-            increase_balance(state, i, rewards[i]);
-            decrease_balance(state, i, penalties[i]);
+            let i = i as u64;
+            increase_balance(state, i, rewards[i as usize]);
+            decrease_balance(state, i, penalties[i as usize]);
         }
     }
 
@@ -277,7 +278,7 @@ pub fn process_registry_updates<
         if is_active_validator(validator, current_epoch)
             && validator.effective_balance <= context.ejection_balance
         {
-            initiate_validator_exit(state, i, context);
+            initiate_validator_exit(state, i.try_into().expect("Error converting"), context);
         }
     }
 
@@ -288,7 +289,7 @@ pub fn process_registry_updates<
         .enumerate()
         .filter_map(|(index, validator)| {
             if is_eligible_for_activation(state, validator) {
-                Some(index)
+                Some(index.try_into().expect("Error converting"))
             } else {
                 None
             }
@@ -296,8 +297,8 @@ pub fn process_registry_updates<
         .collect::<Vec<ValidatorIndex>>();
     // Order by the sequence of activation_eligibility_epoch setting and then index
     activation_queue.sort_by(|&i, &j| {
-        let a = &state.validators[i];
-        let b = &state.validators[j];
+        let a = &state.validators[i as usize];
+        let b = &state.validators[j as usize];
         (a.activation_eligibility_epoch, i).cmp(&(b.activation_eligibility_epoch, j))
     });
 
@@ -307,7 +308,7 @@ pub fn process_registry_updates<
         .into_iter()
         .take(get_validator_churn_limit(state, context))
     {
-        let validator = &mut state.validators[i];
+        let validator = &mut state.validators[i as usize];
         validator.activation_epoch = activation_exit_epoch;
     }
 }
@@ -350,7 +351,7 @@ pub fn process_slashings<
             let penalty_numerator =
                 validator.effective_balance / increment * adjusted_total_slashing_balance;
             let penalty = penalty_numerator / total_balance * increment;
-            decrease_balance(state, i, penalty);
+            decrease_balance(state, i.try_into().expect("Error converting"), penalty);
         }
     }
 
@@ -675,7 +676,7 @@ pub fn get_base_reward<
     context: &Context,
 ) -> Result<Gwei> {
     let total_balance = get_total_active_balance(state, context)?;
-    let effective_balance = state.validators[index].effective_balance;
+    let effective_balance = state.validators[index as usize].effective_balance;
     Ok(effective_balance * context.base_reward_factor
         / total_balance.integer_sqrt()
         / BASE_REWARDS_PER_EPOCH)
@@ -795,14 +796,14 @@ pub fn get_attestation_component_deltas<
             if is_in_inactivity_leak(state, context) {
                 // Since full base reward will be canceled out by inactivity penalty deltas,
                 // optimal participation receives full base reward compensation here.
-                rewards[i] += get_base_reward(state, i, context)?;
+                rewards[i as usize] += get_base_reward(state, i, context)?;
             } else {
                 let reward_numerator =
                     get_base_reward(state, i, context)? * (attesting_balance / increment);
-                rewards[i] += reward_numerator / (total_balance / increment);
+                rewards[i as usize] += reward_numerator / (total_balance / increment);
             }
         } else {
-            penalties[i] += get_base_reward(state, i, context)?;
+            penalties[i as usize] += get_base_reward(state, i, context)?;
         }
     }
     Ok((rewards, penalties))
@@ -934,10 +935,10 @@ pub fn get_inclusion_delay_deltas<
             .iter()
             .min_by(|&a, &b| a.inclusion_delay.cmp(&b.inclusion_delay))
             .expect("at least one attestation in collection");
-        rewards[attestation.proposer_index] += get_proposer_reward(state, i, context)?;
+        rewards[attestation.proposer_index as usize] += get_proposer_reward(state, i, context)?;
         let max_attester_reward =
             get_base_reward(state, i, context)? - get_proposer_reward(state, i, context)?;
-        rewards[i] += max_attester_reward / attestation.inclusion_delay;
+        rewards[i as usize] += max_attester_reward / attestation.inclusion_delay;
     }
     Ok((rewards, vec![0; validator_count]))
 }
@@ -976,11 +977,11 @@ pub fn get_inactivity_penalty_deltas<
         for i in get_eligible_validator_indices(state, context) {
             // If validator is performing optimally this cancels all rewards for a neutral balance
             let base_reward = get_base_reward(state, i, context)?;
-            penalties[i] +=
+            penalties[i as usize] +=
                 BASE_REWARDS_PER_EPOCH * base_reward - get_proposer_reward(state, i, context)?;
             if !matching_target_attesting_indices.contains(&i) {
-                let effective_balance = state.validators[i].effective_balance;
-                penalties[i] += effective_balance * get_finality_delay(state, context)
+                let effective_balance = state.validators[i as usize].effective_balance;
+                penalties[i as usize] += effective_balance * get_finality_delay(state, context)
                     / context.inactivity_penalty_quotient;
             }
         }

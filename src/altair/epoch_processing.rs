@@ -39,7 +39,7 @@ pub fn get_base_reward<
     context: &Context,
 ) -> Result<Gwei> {
     let increments =
-        state.validators[index].effective_balance / context.effective_balance_increment;
+        state.validators[index as usize].effective_balance / context.effective_balance_increment;
     Ok(increments * get_base_reward_per_increment(state, context)?)
 }
 
@@ -134,8 +134,10 @@ pub fn process_inactivity_updates<
     )?;
     let not_is_leaking = !is_in_inactivity_leak(state, context);
     for index in eligible_validator_indices {
+        let u64_index = index;
+        let index = index as usize;
         // Increase the inactivity score of inactive validators
-        if unslashed_participating_indices.contains(&index) {
+        if unslashed_participating_indices.contains(&u64_index) {
             state.inactivity_scores[index] -= u64::min(1, state.inactivity_scores[index]);
         } else {
             state.inactivity_scores[index] += context.inactivity_score_bias;
@@ -187,8 +189,8 @@ pub fn process_rewards_and_penalties<
     deltas.push(get_inactivity_penalty_deltas(state, context)?);
     for (rewards, penalties) in deltas {
         for index in 0..state.validators.len() {
-            increase_balance(state, index, rewards[index]);
-            decrease_balance(state, index, penalties[index]);
+            increase_balance(state, index as u64, rewards[index]);
+            decrease_balance(state, index as u64, penalties[index]);
         }
     }
     Ok(())
@@ -261,7 +263,7 @@ pub fn process_slashings<
             let penalty_numerator =
                 validator.effective_balance / increment * adjusted_total_slashing_balance;
             let penalty = penalty_numerator / total_balance * increment;
-            decrease_balance(state, i, penalty);
+            decrease_balance(state, i.try_into().expect("Should be u64"), penalty);
         }
     }
     Ok(())
