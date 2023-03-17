@@ -1,7 +1,6 @@
 pub use crate::crypto::{PublicKey as BlsPublicKey, Signature as BlsSignature};
 pub use crate::domains::DomainType;
 use crate::ssz::ByteVector;
-use codec::WrapperTypeDecode;
 use ssz_rs::prelude::*;
 
 pub use ssz_rs::prelude::U256;
