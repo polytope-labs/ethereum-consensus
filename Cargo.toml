@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
 default = ["std", "serde", "async"]
-serde = ["dep:serde", "hex", "serde_json", "serde_yaml"]
+serde = ["dep:serde", "hex", "serde_json", "serde_yaml", "ssz-rs/serde"]
 async = ["tokio", "tokio-stream", "async-stream"]
 spec-tests = ["serde", "serde_yaml"]
 gen-spec = ["syn", "prettyplease", "quote"]
@@ -16,26 +16,25 @@ gen-tests = ["walkdir", "convert_case"]
 std = [
     "rand/std",
     "sha2/std",
-    "multihash/std",
     "bs58/std",
-    "getrandom/std",
     "ssz-rs/std",
     "serde/std",
     "multihash/std",
-    "milagro_bls/std"
+    "milagro_bls/std",
+    "enr",
+    "error-chain",
+    "multiaddr"
 ]
 
 [dependencies]
-# Needed for compilation to wasm target
-getrandom = { version = "0.2.8", default-features = false, features = ["js"] }
-ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs",rev = "2e28a8800787392045fb3f8f1eaef6c65a8600d7", default-features = false }
+ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main", default-features = false }
 rand = {version = "0.8.4", default-features = false }
-error-chain={version = "0.12.4", default-features=false }
+error-chain={version = "0.12.4", optional = true }
 sha2 = { version ="0.9.8", default-features = false }
 integer-sqrt = {version = "0.1.5", default-features = false }
-enr = {version = "0.6.2" }
+enr = {version = "0.6.2", optional = true }
 multihash = { version = "0.16", default-features = false, features = ["multihash-impl", "identity", "sha2"] }
-multiaddr = { version="0.14.0", default-features = false }
+multiaddr = { version="0.14.0", optional = true }
 hashbrown = { version="0.13.1" }
 
 serde = { version = "1.0", features = ["derive"], optional = true }
